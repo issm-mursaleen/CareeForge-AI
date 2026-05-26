@@ -13,12 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt /app/backend/requirements.txt
+
+# Install CPU-only PyTorch FIRST so pip doesn't pull the 2GB CUDA build
+RUN pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+
 RUN pip install -r /app/backend/requirements.txt
 
 # Pre-download NLTK data so first request isn't slow
 RUN python -c "import nltk; [nltk.download(p, quiet=True) for p in ('stopwords','punkt','punkt_tab','wordnet')]"
 
-# Pre-cache the default SBERT model
+# Pre-cache the SBERT model (~90MB CPU version)
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 
 COPY ai_engine /app/ai_engine
