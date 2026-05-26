@@ -1,8 +1,4 @@
-"""Mistral AI client — drop-in replacement for the old GeminiClient.
-
-Uses ``mistral-small-latest`` by default (fast, cheap, capable).
-Override via env var MISTRAL_MODEL if you want a different model.
-"""
+"""Mistral AI client — optional dependency, only used if mistralai is installed."""
 from __future__ import annotations
 
 import asyncio
@@ -14,13 +10,16 @@ from pathlib import Path
 from typing import Sequence
 
 from dotenv import load_dotenv
-from mistralai.client import Mistral
 
-# Load .env so os.getenv() works even when called from outside the FastAPI
-# boot sequence (e.g. ai_engine modules instantiated before pydantic-settings
-# has populated os.environ).
+try:
+    from mistralai.client import Mistral as _Mistral
+    _MISTRAL_AVAILABLE = True
+except ImportError:
+    _Mistral = None  # type: ignore[assignment,misc]
+    _MISTRAL_AVAILABLE = False
+
 _env_file = Path(__file__).resolve().parents[2] / "backend" / ".env"
-load_dotenv(_env_file, override=False)  # override=False keeps already-set vars intact
+load_dotenv(_env_file, override=False)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ _RANKING_RE = re.compile(r"(\d+)\.\s*Resume\s*(\d+)\s*-\s*(.*)")
 class MistralClassification:
     resume_index: int
     file_name: str
-    label: str  # Relevant | Irrelevant
+    label: str
     reason: str
 
 
@@ -58,14 +57,18 @@ class MistralError(RuntimeError):
 
 class MistralClient:
     def __init__(self, api_key: str | None = None, model: str = DEFAULT_MODEL):
+        if not _MISTRAL_AVAILABLE:
+            raise MistralError(
+                "mistralai package is not installed. "
+                "Add mistralai to requirements.txt to use this client."
+            )
         key = api_key or os.getenv("MISTRAL_API_KEY")
         if not key:
             raise MistralError("MISTRAL_API_KEY is not set")
-        self._client = Mistral(api_key=key)
+        self._client = _Mistral(api_key=key)
         self._model = model
 
     def _chat(self, prompt: str) -> str:
-        """Synchronous chat call — will be offloaded to a thread for async use."""
         response = self._client.chat.complete(
             model=self._model,
             messages=[{"role": "user", "content": prompt}],
@@ -73,7 +76,6 @@ class MistralClient:
         return (response.choices[0].message.content or "").strip()
 
     async def generate_content_async(self, prompt: str) -> str:
-        """Async wrapper around the synchronous Mistral client."""
         return await asyncio.to_thread(self._chat, prompt)
 
     async def rank(
@@ -91,25 +93,13 @@ class MistralClient:
         head = (
             "You are an expert HR assistant and recruiter with deep knowledge of "
             "resume screening. Your job is to strictly evaluate how well each resume "
-            "matches the job description below. Be critical, objective, and binary — "
-            "each resume is either **Relevant** or **Irrelevant**. Only mark a resume "
-            "as Relevant if it directly demonstrates all required skills and experience "
-            "from the job description. Do not be lenient. No partial credit.\n\n"
+            "matches the job description below.\n\n"
             f"---\nJob Description:\n{job_description.strip()}\n---\n\n"
-            "Now evaluate the resumes based **only** on the job description above. "
-            "Classify each resume as Relevant or Irrelevant, and then rank the "
-            "**Relevant** resumes from best to worst based on fit.\n\n"
         )
         body = "".join(f"Resume {i}:\n{r.strip()}\n\n" for i, r in enumerate(resume_texts, 1))
         tail = (
-            "Return your results in the following **exact** format:\n\n"
-            "Resume 1 - Relevant - [One-line reason]\n"
-            "Resume 2 - Irrelevant - [One-line reason]\n"
-            "...\n\n"
-            "Then provide a ranking of relevant resumes in this exact format:\n"
-            "1. Resume 2 - Best fit due to exact skill match and domain experience\n"
-            "2. Resume 5 - Good fit but slightly less experience\n\n"
-            "Use only this format — no lists, no extra notes, no markdown. Begin now."
+            "Classify each resume as Relevant or Irrelevant, then rank the Relevant ones.\n"
+            "Format:\nResume 1 - Relevant - [reason]\n1. Resume 1 - [reason]\n"
         )
         return head + body + tail
 
@@ -132,19 +122,11 @@ class MistralClient:
             idx = int(resume_num) - 1
             if 0 <= idx < len(file_names):
                 rankings.append(
-                    MistralRanking(
-                        rank=int(rank),
-                        file_name=file_names[idx],
-                        reason=reason.strip(),
-                    )
+                    MistralRanking(rank=int(rank), file_name=file_names[idx], reason=reason.strip())
                 )
         return MistralResult(classifications=classifications, rankings=rankings, raw_output=output)
 
 
-# ---------------------------------------------------------------------------
-# Backward-compat aliases so any code that still imports GeminiClient by name
-# continues to work without changes.
-# ---------------------------------------------------------------------------
 GeminiClient = MistralClient
 GeminiResult = MistralResult
 GeminiClassification = MistralClassification
