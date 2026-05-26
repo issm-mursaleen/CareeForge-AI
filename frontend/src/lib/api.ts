@@ -3,7 +3,7 @@ import { useAuthStore } from "@/store/auth";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1",
-  timeout: 30_000,
+  timeout: 60_000,
 });
 
 api.interceptors.request.use((config) => {
