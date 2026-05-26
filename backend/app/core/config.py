@@ -8,7 +8,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,15 +30,12 @@ class Settings(BaseSettings):
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db: str = "careerforge"
 
-    # CORS — accepts comma-separated string or JSON list
-    allowed_origins: list[str] = ["http://localhost:3000"]
+    # CORS — store as plain string, parsed on access
+    allowed_origins_str: str = Field("http://localhost:3000", alias="ALLOWED_ORIGINS")
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def parse_origins(cls, v: object) -> list[str]:
-        if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        return v  # type: ignore[return-value]
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [o.strip() for o in self.allowed_origins_str.split(",") if o.strip()]
 
     # AI providers
     mistral_api_key: str | None = None
