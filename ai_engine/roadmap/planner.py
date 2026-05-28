@@ -8,7 +8,7 @@ import logging
 from dataclasses import dataclass
 
 from ..evaluation.skill_extractor import SKILL_TAXONOMY, extract_skills
-from ..llm.mistral_client import MistralClient
+from ..llm.groq_client import GroqClient
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +37,15 @@ _ROLE_SKILL_HINTS = {
     "fullstack developer": ["react", "fastapi", "typescript", "postgres", "docker"],
 }
 
+_SYSTEM_PROMPT = (
+    "You are an expert career coach. Return ONLY valid JSON with no markdown, "
+    "no explanation, no code fences. Your entire response must be a single JSON object."
+)
+
 
 class RoadmapPlanner:
-    def __init__(self, mistral: MistralClient | None = None):
-        self.mistral = mistral or MistralClient()
+    def __init__(self, groq: GroqClient | None = None):
+        self.groq = groq or GroqClient()
 
     async def plan(self, target_role: str, resume_text: str) -> Roadmap:
         role_key = target_role.lower()
@@ -49,23 +54,28 @@ class RoadmapPlanner:
         gaps = sorted(required - have)
 
         prompt = (
-            f"You are a career coach. The candidate wants to become a {target_role}. "
+            f"The candidate wants to become a {target_role}. "
             f"Their current skills: {sorted(have) or '[none detected]'}. "
-            f"Their gaps: {gaps or '[none]'}. "
-            f"Generate a 12-week roadmap as strict JSON: "
-            f'{{"milestones":[{{"week":N,"title":"...","description":"...",'
-            f'"skills":["..."]}}],'
-            f'"resources":[{{"title":"...","url":"...","type":"course|book|project"}}]}}'
+            f"Their skill gaps: {gaps or '[none]'}. "
+            f"Generate a 12-week career roadmap. "
+            f"Return ONLY this JSON structure, no other text:\n"
+            f'{{"milestones":[{{"week":1,"title":"...","description":"...","skills":["..."]}}],'
+            f'"resources":[{{"title":"...","url":"https://...","type":"course"}}]}}'
         )
-        raw = await self.mistral.generate_content_async(prompt)
-        if raw.startswith("```"):
+
+        raw = await self.groq.generate_content_async(prompt, system_prompt=_SYSTEM_PROMPT)
+
+        # Strip markdown fences if present
+        if "```" in raw:
             raw = raw.split("```")[1].lstrip("json").strip()
+        raw = raw.strip()
+
         try:
             data = json.loads(raw)
             milestones = [Milestone(**m) for m in data.get("milestones", [])]
             resources = data.get("resources", [])
         except (json.JSONDecodeError, TypeError) as e:
-            logger.warning("Roadmap parse failed: %s", e)
+            logger.warning("Roadmap parse failed: %s | raw: %s", e, raw[:200])
             milestones, resources = [], []
 
         return Roadmap(
