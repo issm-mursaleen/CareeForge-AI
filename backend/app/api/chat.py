@@ -16,5 +16,5 @@ async def send_message(
     user: User = Depends(get_current_user),
 ) -> ChatResponse:
     service = ChatService()
-    session_id, reply = await service.send(user, req.session_id, req.message)
+    session_id, reply = await service.send(user, req.session_id, req.message, req.resume_id)
     return ChatResponse(session_id=session_id, reply=reply)
