@@ -2,13 +2,12 @@
 milestones, skill gaps, and resource recommendations."""
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from dataclasses import dataclass
 
-from ..evaluation.skill_extractor import SKILL_TAXONOMY, extract_skills
-from ..llm.groq_client import GroqClient
+from ..evaluation.skill_extractor import extract_skills
+from ..llm.mistral_client import MistralClient
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +43,8 @@ _SYSTEM_PROMPT = (
 
 
 class RoadmapPlanner:
-    def __init__(self, groq: GroqClient | None = None):
-        self.groq = groq or GroqClient()
+    def __init__(self, mistral: MistralClient | None = None):
+        self.mistral = mistral or MistralClient()
 
     async def plan(self, target_role: str, resume_text: str) -> Roadmap:
         role_key = target_role.lower()
@@ -63,9 +62,8 @@ class RoadmapPlanner:
             f'"resources":[{{"title":"...","url":"https://...","type":"course"}}]}}'
         )
 
-        raw = await self.groq.generate_content_async(prompt, system_prompt=_SYSTEM_PROMPT)
+        raw = await self.mistral.generate_content_async(prompt)
 
-        # Strip markdown fences if present
         if "```" in raw:
             raw = raw.split("```")[1].lstrip("json").strip()
         raw = raw.strip()

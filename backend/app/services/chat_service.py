@@ -1,4 +1,4 @@
-"""AI career-advisor chat — backed by Groq."""
+"""AI career-advisor chat — backed by Mistral AI."""
 from __future__ import annotations
 
 import uuid
@@ -7,7 +7,7 @@ from ..core.config import get_settings
 from ..core.exceptions import ExternalServiceError
 from ..models.chat import ChatMessage, ChatSession
 from ..models.user import User
-from ai_engine.llm.groq_client import GroqClient
+from ai_engine.llm.mistral_client import MistralClient
 
 _SYSTEM = (
     "You are CareerForge AI — a concise, practical career advisor. "
@@ -20,20 +20,20 @@ _SYSTEM = (
 class ChatService:
     def __init__(self) -> None:
         settings = get_settings()
-        if not settings.groq_api_key:
-            raise ExternalServiceError("GROQ_API_KEY not configured")
-        self._client = GroqClient(api_key=settings.groq_api_key)
+        if not settings.mistral_api_key:
+            raise ExternalServiceError("MISTRAL_API_KEY not configured")
+        self._client = MistralClient(api_key=settings.mistral_api_key)
 
     async def send(self, user: User, session_id: str | None, message: str) -> tuple[str, str]:
         session = await self._load_or_create(user, session_id)
         session.messages.append(ChatMessage(role="user", content=message))
 
         history = "\n".join(f"{m.role}: {m.content}" for m in session.messages[-10:])
-        prompt = f"Conversation so far:\n{history}\n\nassistant:"
+        prompt = f"{_SYSTEM}\n\nConversation so far:\n{history}\n\nassistant:"
         try:
-            reply = await self._client.generate_content_async(prompt, system_prompt=_SYSTEM)
+            reply = await self._client.generate_content_async(prompt)
         except Exception as e:
-            raise ExternalServiceError(f"Groq call failed: {e}") from e
+            raise ExternalServiceError(f"Mistral call failed: {e}") from e
 
         session.messages.append(ChatMessage(role="assistant", content=reply))
         await session.save()
