@@ -12,7 +12,7 @@ from typing import Sequence
 from dotenv import load_dotenv
 
 try:
-    from mistralai.client import Mistral as _Mistral
+    from mistralai import Mistral as _Mistral
     _MISTRAL_AVAILABLE = True
 except ImportError:
     _Mistral = None  # type: ignore[assignment,misc]
