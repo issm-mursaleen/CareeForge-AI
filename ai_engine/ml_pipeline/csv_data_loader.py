@@ -38,7 +38,7 @@ _JD_CSV = _DATASETS_DIR / "jobs_description.csv"
 _DS_CSV = _DATASETS_DIR / "DataScientist.csv"
 
 # ── Constants ────────────────────────────────────────────────────────────────
-_SAMPLE_SIZE = 8_000   # rows sampled from jobs_description.csv
+_SAMPLE_SIZE = 2_000   # rows sampled — kept low for Render free tier (512 MB RAM)
 _RANDOM_SEED = 42
 
 _EDU_SCORE: dict[str, int] = {
@@ -132,7 +132,6 @@ def load_csv_training_dataset(sample_size: int = _SAMPLE_SIZE) -> list[dict]:
         qual = str(row.get("Qualifications", "unknown")).strip()
         exp_str = str(row.get("Experience", "0 to 5 Years"))
         role = str(row.get("Role", "")).strip()
-        job_title = str(row.get("Job Title", "")).strip()
 
         min_exp, max_exp = _parse_experience(exp_str)
 
