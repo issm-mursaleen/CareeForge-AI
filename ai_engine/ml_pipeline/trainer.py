@@ -97,16 +97,13 @@ def train_model(
         stratify=stratify,
     )
     logger.info(
-        "training_split",
-        train=len(y_train),
-        test=len(y_test),
-        positive_train=int(y_train.sum()),
-        positive_test=int(y_test.sum()),
+        "training_split: train=%d test=%d pos_train=%d pos_test=%d",
+        len(y_train), len(y_test), int(y_train.sum()), int(y_test.sum()),
     )
 
     # ── Model selection ─────────────────────────────────────────────────────
     clf, algo_name = _get_classifier()
-    logger.info("training_algorithm", algorithm=algo_name)
+    logger.info("training_algorithm: %s", algo_name)
 
     # ── Cross-validation ────────────────────────────────────────────────────
     cv_scores: list[float] = []
@@ -120,9 +117,9 @@ def train_model(
             cv_scores = [round(float(s), 4) for s in scores]
             cv_mean = round(float(np.mean(scores)), 4)
             cv_std = round(float(np.std(scores)), 4)
-            logger.info("training_cv", folds=_CV_FOLDS, mean=cv_mean, std=cv_std)
+            logger.info("training_cv: folds=%d mean=%.4f std=%.4f", _CV_FOLDS, cv_mean, cv_std)
         except Exception as exc:
-            logger.warning("training_cv_skipped", reason=str(exc))
+            logger.warning("training_cv_skipped: %s", str(exc))
 
     # ── Final fit on full training set ──────────────────────────────────────
     clf.fit(X_train, y_train)
@@ -141,7 +138,7 @@ def train_model(
         "test_size": int(len(y_test)),
     }
     joblib.dump(bundle, MODEL_PATH)
-    logger.info("training_saved", path=str(MODEL_PATH), algorithm=algo_name)
+    logger.info("training_saved: path=%s algorithm=%s", str(MODEL_PATH), algo_name)
 
     result = TrainingResult(
         model_name="good_fit_classifier",

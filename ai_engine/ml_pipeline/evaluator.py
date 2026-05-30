@@ -79,7 +79,7 @@ def evaluate(model: Any, X_test: Any, y_test: Any) -> EvaluationResult:
             fpr_list = [round(float(fpr_arr[i]), 4) for i in idx]
             tpr_list = [round(float(tpr_arr[i]), 4) for i in idx]
     except Exception as exc:
-        logger.warning("evaluation_roc_failed", error=str(exc))
+        logger.warning("evaluation_roc_failed: %s", str(exc))
 
     report = classification_report(
         y_arr,
@@ -100,11 +100,7 @@ def evaluate(model: Any, X_test: Any, y_test: Any) -> EvaluationResult:
         classification_report=report,
     )
     logger.info(
-        "evaluation_done",
-        accuracy=result.accuracy,
-        precision=result.precision,
-        recall=result.recall,
-        f1=result.f1_score,
-        roc_auc=result.roc_auc,
+        "evaluation_done: accuracy=%.4f precision=%.4f recall=%.4f f1=%.4f roc_auc=%.4f",
+        result.accuracy, result.precision, result.recall, result.f1_score, result.roc_auc,
     )
     return result

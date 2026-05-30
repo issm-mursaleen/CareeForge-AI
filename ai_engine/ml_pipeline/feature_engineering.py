@@ -49,7 +49,7 @@ def extract_features(
         transformers : dict of fitted sklearn transformers (saved with model)
         info         : FeatureInfo with dimension breakdown
     """
-    logger.info("feature_engineering_start", n_records=len(records))
+    logger.info("feature_engineering_start: n_records=%d", len(records))
 
     resume_texts = [r.resume_text for r in records]
     jd_texts = [r.job_description for r in records]
@@ -114,12 +114,8 @@ def extract_features(
     )
 
     logger.info(
-        "feature_engineering_done",
-        shape=f"{X.shape[0]}x{X.shape[1]}",
-        resume_feats=info.tfidf_resume_features,
-        jd_feats=info.tfidf_jd_features,
-        num_feats=info.numeric_features,
-        cat_feats=info.categorical_features,
-        positive_ratio=round(info.positive_class_ratio, 3),
+        "feature_engineering_done: shape=%dx%d resume=%d jd=%d num=%d cat=%d pos_ratio=%.3f",
+        X.shape[0], X.shape[1], info.tfidf_resume_features, info.tfidf_jd_features,
+        info.numeric_features, info.categorical_features, info.positive_class_ratio,
     )
     return X, transformers, info

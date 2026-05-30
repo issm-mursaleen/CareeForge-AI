@@ -61,7 +61,7 @@ def load_training_dataset(records: list[dict[str, Any]]) -> list[RawCandidateRec
     Returns:
         List of validated RawCandidateRecord instances.
     """
-    logger.info("data_gathering_start", raw_count=len(records))
+    logger.info("data_gathering_start: raw_count=%d", len(records))
     validated: list[RawCandidateRecord] = []
     skipped = 0
 
@@ -92,15 +92,12 @@ def load_training_dataset(records: list[dict[str, Any]]) -> list[RawCandidateRec
                 )
             )
         except Exception as exc:
-            logger.debug("data_gathering_record_skip", error=str(exc))
+            logger.debug("data_gathering_record_skip: %s", str(exc))
             skipped += 1
 
     pos = sum(r.target_label for r in validated)
     logger.info(
-        "data_gathering_done",
-        validated=len(validated),
-        skipped=skipped,
-        positive=pos,
-        negative=len(validated) - pos,
+        "data_gathering_done: validated=%d skipped=%d positive=%d negative=%d",
+        len(validated), skipped, pos, len(validated) - pos,
     )
     return validated

@@ -41,7 +41,7 @@ def remove_missing_values(
     before = len(records)
     cleaned = [r for r in records if r.resume_text.strip() and r.job_description.strip()]
     removed = before - len(cleaned)
-    logger.info("cleaning_missing_removed", count=removed, kept=len(cleaned))
+    logger.info("cleaning_missing_removed: count=%d kept=%d", removed, len(cleaned))
     return cleaned, removed
 
 
@@ -57,7 +57,7 @@ def remove_duplicates(
             seen.add(r.candidate_id)
             cleaned.append(r)
     removed = before - len(cleaned)
-    logger.info("cleaning_duplicates_removed", count=removed, kept=len(cleaned))
+    logger.info("cleaning_duplicates_removed: count=%d kept=%d", removed, len(cleaned))
     return cleaned, removed
 
 
@@ -73,7 +73,7 @@ def remove_outliers(
         and r.experience_years <= _MAX_EXPERIENCE_YEARS
     ]
     removed = before - len(cleaned)
-    logger.info("cleaning_outliers_removed", count=removed, kept=len(cleaned))
+    logger.info("cleaning_outliers_removed: count=%d kept=%d", removed, len(cleaned))
     return cleaned, removed
 
 
@@ -94,7 +94,7 @@ def clean_dataset(
         (cleaned_records, CleaningStats)
     """
     before = len(records)
-    logger.info("cleaning_start", records_before=before)
+    logger.info("cleaning_start: records_before=%d", before)
 
     records, missing = remove_missing_values(records)
     records, dups = remove_duplicates(records)
@@ -118,11 +118,7 @@ def clean_dataset(
         removed_outliers=outliers,
     )
     logger.info(
-        "cleaning_done",
-        records_after=after,
-        total_removed=before - after,
-        missing=missing,
-        duplicates=dups,
-        outliers=outliers,
+        "cleaning_done: records_after=%d total_removed=%d missing=%d duplicates=%d outliers=%d",
+        after, before - after, missing, dups, outliers,
     )
     return records, stats
