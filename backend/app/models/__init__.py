@@ -8,6 +8,7 @@ from .roadmap import RoadmapDoc
 from .chat import ChatSession
 from .ml_metrics import MLMetricsDoc
 from .good_fit_metrics import GoodFitMetricsDoc
+from .ml_training_record import MLTrainingRecord
 
 ALL_DOCUMENTS = (
     User,
@@ -20,10 +21,11 @@ ALL_DOCUMENTS = (
     ChatSession,
     MLMetricsDoc,
     GoodFitMetricsDoc,
+    MLTrainingRecord,
 )
 
 __all__ = [
     "User", "UserRole", "Resume", "JobMatch", "Interview", "Analytics",
     "AILog", "RoadmapDoc", "ChatSession", "MLMetricsDoc",
-    "GoodFitMetricsDoc", "ALL_DOCUMENTS",
+    "GoodFitMetricsDoc", "MLTrainingRecord", "ALL_DOCUMENTS",
 ]

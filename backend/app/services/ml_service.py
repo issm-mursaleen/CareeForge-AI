@@ -17,7 +17,7 @@ import logging
 from datetime import datetime
 
 from ..models.good_fit_metrics import GoodFitMetricsDoc
-from ai_engine.ml_pipeline.csv_data_loader import load_csv_training_dataset
+from ..models.ml_training_record import MLTrainingRecord
 from ai_engine.ml_pipeline.data_loader import load_training_dataset
 from ai_engine.ml_pipeline.evaluator import evaluate
 from ai_engine.ml_pipeline.feature_engineering import extract_features
@@ -31,12 +31,24 @@ _MIN_TRAINING_RECORDS = 5
 
 
 async def _build_raw_records() -> list[dict]:
-    """Fetch training data exclusively from the CSV datasets.
+    """Fetch training data from the ml_training_data MongoDB collection.
 
-    Source: Datsets/jobs_description.csv + Datsets/DataScientist.csv
-    Labels are derived from qualification score + experience years.
+    Data is seeded once via database/seeds/seed_ml_training.py which reads
+    the CSV datasets locally and inserts records into Atlas.
     """
-    records = load_csv_training_dataset()
+    docs = await MLTrainingRecord.find_all().to_list()
+    records = [
+        {
+            "candidate_id": d.candidate_id,
+            "resume_text": d.resume_text,
+            "job_description": d.job_description,
+            "experience_years": d.experience_years,
+            "education": d.education,
+            "is_good_fit": d.is_good_fit,
+            "composite": d.composite,
+        }
+        for d in docs
+    ]
     logger.info("ml_raw_records_fetched: %d", len(records))
     return records
 
