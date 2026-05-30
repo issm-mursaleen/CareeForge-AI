@@ -3,7 +3,16 @@
     "allow": [
       "Bash(claude mcp *)",
       "WebFetch(domain:stitch.claude.ai)",
-      "WebFetch(domain:claude.ai)"
+      "WebFetch(domain:claude.ai)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
+      "Bash(curl -s -X POST https://careerforge-backend-dfpi.onrender.com/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@careerforge.ai\",\"password\":\"Admin@12345\"}')",
+      "Bash(curl -s -X POST https://careerforge-backend-dfpi.onrender.com/api/v1/ml/retrain -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YTEyZDliZGQzOTE5YzhiNTVkMWIwOWQiLCJyb2xlIjoiYWRtaW4iLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzgwMTU3MDQ2LCJleHAiOjE3ODAxNTg4NDZ9.e2rF-dWs_QjmlpEvL5oUdFj3dZ2cF8LOF9oayTmdkF4')",
+      "Bash(curl -s \"https://careerforge-backend-dfpi.onrender.com/openapi.json\")",
+      "Bash(python -c \"import sys,json; routes=[r['path'] for r in json.load\\(sys.stdin\\)['paths']]; [print\\(r\\) for r in routes]\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(r\\) for r in data.get\\('paths',{}\\).keys\\(\\)]\")"
     ]
   }
 }
