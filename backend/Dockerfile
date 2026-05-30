@@ -27,6 +27,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 COPY ai_engine /app/ai_engine
 COPY backend /app/backend
+COPY Datsets /app/Datsets
 
 ENV PYTHONPATH=/app
 WORKDIR /app/backend
