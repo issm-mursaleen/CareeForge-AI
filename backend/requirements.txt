@@ -19,7 +19,7 @@ gensim==4.3.3
 scikit-learn==1.5.2
 xgboost==2.0.3
 joblib==1.4.2
-scipy==1.14.1
+scipy==1.13.1
 nltk==3.9.1
 pdfplumber==0.11.4
 docx2txt==0.8
