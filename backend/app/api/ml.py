@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..models.user import User, UserRole
 from ..services.ml_service import MLService
@@ -95,29 +95,26 @@ async def get_latest(
     }
 
 
-@router.post("/retrain", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/retrain")
 async def retrain(
-    background_tasks: BackgroundTasks,
     user: User = Depends(require_role(UserRole.ADMIN)),
 ) -> dict:
-    """Trigger a full ML pipeline retrain in the background.
+    """Trigger a full ML pipeline retrain synchronously.
 
-    Admin only.  Returns 202 immediately; check GET /api/v1/ml/latest for results.
+    Admin only. Runs inline so errors are visible in the response.
     """
-
-    async def _run_pipeline() -> None:
-        try:
-            await MLService.run_full_pipeline()
-            logger.info("retrain_completed: triggered_by=%s", str(user.id))
-        except Exception as exc:
-            logger.error("retrain_failed: %s triggered_by=%s", str(exc), str(user.id))
-
-    background_tasks.add_task(_run_pipeline)
-    return {
-        "status": "started",
-        "message": (
-            "Retrain pipeline started in background. "
-            "Check GET /api/v1/ml/latest for updated results."
-        ),
-        "triggered_by": str(user.id),
-    }
+    try:
+        doc = await MLService.run_full_pipeline()
+        logger.info("retrain_completed: triggered_by=%s", str(user.id))
+        return {
+            "status": "completed",
+            "algorithm": doc.algorithm,
+            "dataset_size": doc.dataset_size,
+            "accuracy": doc.accuracy,
+            "f1_score": doc.f1_score,
+            "roc_auc": doc.roc_auc,
+            "triggered_by": str(user.id),
+        }
+    except Exception as exc:
+        logger.error("retrain_failed: %s triggered_by=%s", str(exc), str(user.id))
+        raise HTTPException(status_code=500, detail=f"Training failed: {exc}")
