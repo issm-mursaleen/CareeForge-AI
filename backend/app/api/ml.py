@@ -108,9 +108,9 @@ async def retrain(
     async def _run_pipeline() -> None:
         try:
             await MLService.run_full_pipeline()
-            logger.info("retrain_completed", triggered_by=str(user.id))
+            logger.info("retrain_completed: triggered_by=%s", str(user.id))
         except Exception as exc:
-            logger.error("retrain_failed", error=str(exc), triggered_by=str(user.id))
+            logger.error("retrain_failed: %s triggered_by=%s", str(exc), str(user.id))
 
     background_tasks.add_task(_run_pipeline)
     return {

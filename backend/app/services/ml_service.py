@@ -62,7 +62,7 @@ async def _build_raw_records() -> list[dict]:
 
     # ── Source 2: standalone resumes (cold-start) ───────────────────────────
     if len(records) < _MIN_TRAINING_RECORDS:
-        logger.info("ml_cold_start", note="augmenting from standalone resumes")
+        logger.info("ml_cold_start: augmenting from standalone resumes")
         seen_ids = {r["candidate_id"].split("_")[0] for r in records}
         resumes = await Resume.find_all().to_list()
         for resume in resumes:
@@ -80,7 +80,7 @@ async def _build_raw_records() -> list[dict]:
                 }
             )
 
-    logger.info("ml_raw_records_fetched", count=len(records))
+    logger.info("ml_raw_records_fetched: %d", len(records))
     return records
 
 
@@ -97,7 +97,7 @@ class MLService:
         Raises:
             ValueError when there is insufficient training data.
         """
-        logger.info("ml_pipeline_start", ts=datetime.utcnow().isoformat())
+        logger.info("ml_pipeline_start: %s", datetime.utcnow().isoformat())
 
         # ── Stage 1: Data Gathering ──────────────────────────────────────
         raw_records = await _build_raw_records()
@@ -157,12 +157,8 @@ class MLService:
         await doc.insert()
 
         logger.info(
-            "ml_pipeline_done",
-            algorithm=doc.algorithm,
-            dataset_size=doc.dataset_size,
-            accuracy=doc.accuracy,
-            f1=doc.f1_score,
-            roc_auc=doc.roc_auc,
+            "ml_pipeline_done: algorithm=%s dataset=%d accuracy=%.3f f1=%.3f roc_auc=%.3f",
+            doc.algorithm, doc.dataset_size, doc.accuracy, doc.f1_score, doc.roc_auc,
         )
         return doc
 
