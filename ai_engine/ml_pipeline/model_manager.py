@@ -37,7 +37,7 @@ def save_model(bundle: dict[str, Any], path: Path | None = None) -> Path:
     target = path or MODEL_PATH
     ensure_model_dir()
     joblib.dump(bundle, target)
-    logger.info("good_fit_model_saved", path=str(target))
+    logger.info("good_fit_model_saved: %s", str(target))
     return target
 
 
@@ -45,14 +45,14 @@ def load_model(path: Path | None = None) -> dict[str, Any] | None:
     """Load a model bundle from disk. Returns None when the file is absent."""
     target = path or MODEL_PATH
     if not target.exists():
-        logger.warning("good_fit_model_not_found", path=str(target))
+        logger.warning("good_fit_model_not_found: %s", str(target))
         return None
     try:
         bundle = joblib.load(target)
-        logger.info("good_fit_model_loaded", path=str(target))
+        logger.info("good_fit_model_loaded: %s", str(target))
         return bundle
     except Exception as exc:
-        logger.warning("good_fit_model_load_failed", error=str(exc))
+        logger.warning("good_fit_model_load_failed: %s", str(exc))
         return None
 
 
@@ -61,10 +61,8 @@ def load_for_startup() -> None:
     global _fit_bundle
     _fit_bundle = load_model()
     if _fit_bundle:
-        logger.info(
-            "good_fit_model_cached",
-            algorithm=_fit_bundle.get("algorithm", "unknown"),
-        )
+        algo = _fit_bundle.get("algorithm", "unknown")
+        logger.info("good_fit_model_cached: algorithm=%s", algo)
 
 
 def get_loaded_model() -> dict[str, Any] | None:
@@ -108,5 +106,5 @@ def predict_fit(
         label_name = bundle.get("label_map", {}).get(label, str(label))
         return {"label": label, "label_name": label_name, "probability": probability}
     except Exception as exc:
-        logger.warning("good_fit_predict_failed", error=str(exc))
+        logger.warning("good_fit_predict_failed: %s", str(exc))
         return None

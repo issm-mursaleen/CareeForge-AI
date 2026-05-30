@@ -35,7 +35,16 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> list[str]:
-        return [o.strip() for o in self.allowed_origins_str.split(",") if o.strip()]
+        v = self.allowed_origins_str.strip()
+        # Handle JSON array format: ["http://localhost:3000","https://..."]
+        if v.startswith("["):
+            import json
+            try:
+                return [str(o).strip() for o in json.loads(v) if str(o).strip()]
+            except json.JSONDecodeError:
+                pass
+        # Plain comma-separated: http://localhost:3000,https://...
+        return [o.strip() for o in v.split(",") if o.strip()]
 
     # AI providers
     mistral_api_key: str | None = None
