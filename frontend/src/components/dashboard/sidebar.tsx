@@ -28,7 +28,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden md:flex h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex-col p-md gap-xs bg-surface z-40">
+    <aside className="hidden md:flex h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex-col p-md gap-xs bg-surface z-40 transition-all duration-300">
       <div className="mb-lg">
         <Link href="/">
           <h1 className="font-headline-md text-headline-md font-bold text-primary">CareerForge AI</h1>
@@ -46,13 +46,13 @@ export function Sidebar() {
                 key={href}
                 href={href as any}
                 className={cn(
-                  "flex items-center gap-sm px-sm py-xs rounded-lg transition-all font-label-md text-label-md",
+                  "flex items-center gap-sm px-sm py-xs rounded-xl transition-all duration-150 font-label-md text-label-md active:scale-95",
                   active
-                    ? "bg-primary-container text-on-primary-container font-bold"
-                    : "text-on-surface-variant hover:bg-surface-container-high",
+                    ? "bg-primary-container text-on-primary-container font-bold shadow-sm"
+                    : "text-on-surface-variant hover:bg-surface-container-high hover:translate-x-0.5",
                 )}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>{icon}</span>
                 {label}
               </Link>
             );

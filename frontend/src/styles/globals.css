@@ -6,24 +6,144 @@
   color-scheme: light;
 }
 
-html, body { height: 100%; }
-
-body {
-  @apply bg-surface text-on-surface antialiased;
-  font-family: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+  /* prevent iOS overscroll bounce on the html level */
+  overscroll-behavior: none;
 }
 
+body {
+  height: 100%;
+  @apply bg-surface text-on-surface antialiased;
+  font-family: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
+  /* Remove iOS tap flash */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent horizontal overflow on mobile */
+  overflow-x: hidden;
+}
+
+/* ── Icons ────────────────────────────────────────────────────────────────── */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   display: inline-block;
   vertical-align: middle;
   line-height: 1;
+  /* Prevent icon font from causing layout shift on mobile */
+  user-select: none;
 }
 
+/* ── Utility classes ─────────────────────────────────────────────────────── */
 .glass {
   @apply bg-surface-container-lowest border border-outline-variant;
 }
 
 .gradient-text {
   @apply text-primary font-bold;
+}
+
+/* ── Page animations ─────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+/* Applied to main content wrapper */
+.page-animate {
+  animation: fadeInUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Staggered children — add delay via style prop */
+.stagger > * {
+  animation: fadeInUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1)  { animation-delay: 0ms;   }
+.stagger > *:nth-child(2)  { animation-delay: 40ms;  }
+.stagger > *:nth-child(3)  { animation-delay: 80ms;  }
+.stagger > *:nth-child(4)  { animation-delay: 120ms; }
+.stagger > *:nth-child(5)  { animation-delay: 160ms; }
+.stagger > *:nth-child(6)  { animation-delay: 200ms; }
+
+/* Card hover lift */
+.card-hover {
+  @apply transition-all duration-200 ease-out;
+}
+.card-hover:hover {
+  @apply shadow-md -translate-y-0.5;
+}
+
+/* Drawer slide-in from left */
+@keyframes drawerIn {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0);     }
+}
+@keyframes drawerOut {
+  from { transform: translateX(0);     }
+  to   { transform: translateX(-100%); }
+}
+.drawer-enter { animation: drawerIn  0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.drawer-exit  { animation: drawerOut 0.22s cubic-bezier(0.55, 0, 1, 0.45) both; }
+
+/* Bottom sheet slide-up */
+@keyframes sheetIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+.sheet-enter { animation: sheetIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Overlay fade */
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.overlay-enter { animation: overlayIn 0.2s ease both; }
+
+/* Pulse dot for active state */
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%       { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* Active press for touch buttons */
+.touch-btn {
+  @apply transition-transform duration-100 active:scale-95 select-none;
+}
+
+/* Bottom nav safe area */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mb-nav {
+  /* extra bottom margin so content isn't hidden behind bottom nav on mobile */
+  margin-bottom: 5rem;
+}
+@media (min-width: 768px) {
+  .mb-nav { margin-bottom: 0; }
+}
+
+/* Scrollbar thin on desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-outline-variant rounded-full; }
 }
