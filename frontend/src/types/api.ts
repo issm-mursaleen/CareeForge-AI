@@ -110,6 +110,33 @@ export interface AnswerResult {
   improvements: string[];
 }
 
+// --- Good Fit ML Pipeline ---
+export interface GoodFitMetricsSummary {
+  id: string;
+  model_name: string;
+  algorithm: string;
+  dataset_size: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+  roc_auc: number;
+  created_at: string;
+}
+
+export interface GoodFitMetrics extends GoodFitMetricsSummary {
+  train_size: number;
+  test_size: number;
+  feature_count: number;
+  confusion_matrix: number[][];
+  roc_curve: { fpr: number[]; tpr: number[] };
+  cv_mean: number;
+  cv_std: number;
+  cleaning_stats: Record<string, number>;
+  feature_info: Record<string, number>;
+  metrics: { metric: string; value: number }[];
+}
+
 // --- Roadmap ---
 export interface RoadmapMilestone {
   week: number;

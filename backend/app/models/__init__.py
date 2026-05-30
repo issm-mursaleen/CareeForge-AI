@@ -7,6 +7,7 @@ from .ai_log import AILog
 from .roadmap import RoadmapDoc
 from .chat import ChatSession
 from .ml_metrics import MLMetricsDoc
+from .good_fit_metrics import GoodFitMetricsDoc
 
 ALL_DOCUMENTS = (
     User,
@@ -18,9 +19,11 @@ ALL_DOCUMENTS = (
     RoadmapDoc,
     ChatSession,
     MLMetricsDoc,
+    GoodFitMetricsDoc,
 )
 
 __all__ = [
     "User", "UserRole", "Resume", "JobMatch", "Interview", "Analytics",
-    "AILog", "RoadmapDoc", "ChatSession", "MLMetricsDoc", "ALL_DOCUMENTS",
+    "AILog", "RoadmapDoc", "ChatSession", "MLMetricsDoc",
+    "GoodFitMetricsDoc", "ALL_DOCUMENTS",
 ]

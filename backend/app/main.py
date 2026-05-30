@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api import build_api_router
 from .core.config import get_settings
 from .core.logging import configure_logging, get_logger
-from .core.ml_model import load_model
+from .core.ml_model import load_model, load_good_fit_model
 from .db import close_db, init_db
 from .middleware import RequestLoggingMiddleware, register_exception_handlers
 
@@ -26,6 +26,9 @@ async def lifespan(_: FastAPI):
     # Load the local TF-IDF job-role classifier into process memory so
     # request handlers can predict synchronously without disk I/O.
     load_model()
+
+    # Load the Good Fit binary classifier (no-op if not yet trained).
+    load_good_fit_model()
 
     # Warm caches that cost real time on the first request
     try:

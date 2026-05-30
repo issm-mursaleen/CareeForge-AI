@@ -8,6 +8,7 @@ from .roadmap import router as roadmap_router
 from .interview import router as interview_router
 from .analytics import router as analytics_router
 from .admin import router as admin_router
+from .ml import router as ml_router
 
 
 def build_api_router() -> APIRouter:
@@ -20,4 +21,5 @@ def build_api_router() -> APIRouter:
     router.include_router(interview_router, prefix="/interview", tags=["interview"])
     router.include_router(analytics_router, prefix="/analytics", tags=["analytics"])
     router.include_router(admin_router, prefix="/admin", tags=["admin"])
+    router.include_router(ml_router, prefix="/ml", tags=["ml-pipeline"])
     return router

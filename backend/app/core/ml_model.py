@@ -60,3 +60,12 @@ def predict_role(text: str) -> str | None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("ml_predict_failed", error=str(exc))
         return None
+
+
+def load_good_fit_model() -> None:
+    """Load the Good Fit binary classifier into the ai_engine's in-process cache."""
+    try:
+        from ai_engine.ml_pipeline.model_manager import load_for_startup
+        load_for_startup()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("good_fit_model_load_skipped", error=str(exc))

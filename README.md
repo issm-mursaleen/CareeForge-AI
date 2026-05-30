@@ -137,6 +137,125 @@ The original `app.py` / `Models.py` / `AI_rank.py` still sit at the repo root an
 - **Mongo** → MongoDB Atlas free tier
 - Set production env vars in the platform's secret manager
 
+## AI Lifecycle Implementation
+
+The `ai_engine/ml_pipeline/` module implements a formal, end-to-end ML lifecycle
+for the **Good Fit Binary Classifier** — a model that predicts whether a candidate
+is a Good Fit (1) or Bad Fit (0) for a role, trained on resume × job-description
+pairs from the platform's own MongoDB collections.
+
+### 1. Data Gathering
+
+**File:** `ai_engine/ml_pipeline/data_loader.py`
+
+`load_training_dataset(records)` accepts raw MongoDB dicts (fetched by
+`backend/app/services/ml_service.py` from the `job_matches` and `resumes`
+collections) and validates them into typed `RawCandidateRecord` Pydantic
+models.  Label derivation:
+
+- `is_good_fit` is set on a `CandidateScore` → use it directly.
+- Otherwise: `composite_score >= 0.5` → Good Fit (1), else Bad Fit (0).
+- Cold-start fallback (no job-match data): `ats_score >= 60` → Good Fit.
+
+### 2. Data Cleaning
+
+**File:** `ai_engine/ml_pipeline/preprocessing.py`
+
+`clean_dataset()` runs four explicit cleaning functions in sequence and
+logs record counts before and after each step:
+
+| Function | What it removes |
+|----------|----------------|
+| `remove_missing_values()` | Records with empty resume or job description |
+| `remove_duplicates()` | Repeated `candidate_id` entries (keep first) |
+| `remove_outliers()` | Resumes < 100 or > 50 000 chars; experience > 60 yrs |
+| `normalize_text()` | HTML tags, extra whitespace, special characters; lowercase |
+
+Cleaning statistics are stored in MongoDB with every training run.
+
+### 3. Feature Engineering
+
+**File:** `ai_engine/ml_pipeline/feature_engineering.py`
+
+`extract_features()` builds a combined sparse feature matrix:
+
+| Feature group | Transformer | Dimensions |
+|---------------|-------------|------------|
+| Resume text | `TfidfVectorizer` (unigrams + bigrams) | max 300 |
+| Job description | `TfidfVectorizer` (unigrams) | max 150 |
+| Numerical | `MinMaxScaler` — experience_years, resume_length_norm | 2 |
+| Categorical | `OneHotEncoder` — education level | 6 |
+
+All sub-matrices are combined via `scipy.sparse.hstack`.
+Feature dimensions are persisted with every training run.
+
+### 4. Model Training
+
+**File:** `ai_engine/ml_pipeline/trainer.py`
+
+`train_model()` performs:
+
+1. Stratified 80/20 train/test split.
+2. 3-fold `StratifiedKFold` cross-validation (skipped when data < 6 samples).
+3. Model selection: **XGBoost → RandomForest → LogisticRegression** (first available).
+4. Final fit on the full training split.
+5. Save model bundle to `models/good_fit_classifier.pkl` via `joblib`.
+
+### 5. Model Evaluation
+
+**File:** `ai_engine/ml_pipeline/evaluator.py`
+
+`evaluate()` computes:
+
+- **Accuracy, Precision, Recall, F1 Score** (binary, zero-division safe)
+- **Confusion Matrix** (2 × 2: TN / FP / FN / TP)
+- **ROC Curve** (fpr[], tpr[] sampled at ≤ 50 points) + **AUC**
+- **Classification Report** (per-class breakdown string)
+
+---
+
+## University Rubric Mapping
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **JWT Authentication** | `backend/app/core/security.py` — HS256 access (30 min) + refresh (7 day) tokens |
+| **Protected Routes (backend)** | `backend/app/api/dependencies.py` — `get_current_user()`, `require_role()` |
+| **Protected Routes (frontend)** | `frontend/src/components/dashboard/auth-guard.tsx` — client-side JWT check |
+| **MongoDB** | `backend/app/db/mongo.py` — Motor + Beanie ODM, 10 collections |
+| **Pydantic Validation** | All API schemas in `backend/app/schemas/` + ML schemas in `ai_engine/ml_pipeline/schemas.py` |
+| **Data Gathering** | `ai_engine/ml_pipeline/data_loader.py` — `load_training_dataset()` |
+| **Data Cleaning** | `ai_engine/ml_pipeline/preprocessing.py` — `clean_dataset()` with 4 explicit functions |
+| **Feature Engineering** | `ai_engine/ml_pipeline/feature_engineering.py` — TF-IDF + MinMaxScaler + OHE |
+| **Model Training** | `ai_engine/ml_pipeline/trainer.py` — XGBoost / RF / LR + CV + train/test split |
+| **Model Evaluation** | `ai_engine/ml_pipeline/evaluator.py` — Accuracy / Precision / Recall / F1 / ROC-AUC / CM |
+| **Metrics Storage** | `backend/app/models/good_fit_metrics.py` — `GoodFitMetricsDoc` → `ml_model_metrics` collection |
+| **Model Loading at Startup** | `backend/app/main.py` lifespan → `load_good_fit_model()` — pre-warms in-process cache |
+| **Secure Metrics API** | `backend/app/api/ml.py` — `GET /ml/metrics`, `GET /ml/latest`, `POST /ml/retrain` (admin) |
+| **Dashboard Visualization** | `frontend/src/app/(dashboard)/dashboard/page.tsx` — confusion matrix grid + ROC curve (Recharts) |
+| **Frontend Service Layer** | `frontend/src/services/ml.ts` — `getMLMetrics()`, `getLatestMLMetrics()`, `retrainModel()` |
+| **FastAPI REST APIs** | `backend/app/api/` — auth, resumes, ranking, chat, roadmap, interview, analytics, admin, ml |
+| **Recharts Dashboard** | `frontend/src/app/(dashboard)/dashboard/page.tsx` — ATS trend, ML bar chart, ROC curve |
+| **Role-Based Auth** | `UserRole` enum (user / recruiter / admin); `require_role(UserRole.ADMIN)` on retrain endpoint |
+| **BM25 Ranking** | `ai_engine/ranking/bm25.py` |
+| **BERT / Embedding Ranking** | `ai_engine/ranking/bert.py` + `ai_engine/embeddings/sbert.py` |
+| **LLM Integration** | `ai_engine/llm/mistral_client.py` (chat), `ai_engine/llm/groq_client.py` (explanations) |
+
+### Retrain the Good Fit model
+
+```bash
+# Requires admin account — set role in MongoDB or via seed script
+curl -X POST https://<your-backend>/api/v1/ml/retrain \
+  -H "Authorization: Bearer <admin_access_token>"
+
+# Check results
+curl https://<your-backend>/api/v1/ml/latest \
+  -H "Authorization: Bearer <access_token>"
+```
+
+> **Note:** On Render free tier the `models/` directory is ephemeral.
+> Retrain is required after each cold restart.  For persistence, mount a
+> volume or store the model bundle in MongoDB GridFS.
+
 ## License
 
 MIT — semester project.

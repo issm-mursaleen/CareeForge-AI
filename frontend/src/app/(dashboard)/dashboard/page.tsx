@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { analyticsService } from "@/services/analytics";
 import { roadmapService } from "@/services/roadmap";
+import { mlService } from "@/services/ml";
 import Link from "next/link";
 import {
   Bar, BarChart, CartesianGrid, Cell,
@@ -41,6 +42,12 @@ export default function DashboardPage() {
   const { data: roadmaps } = useQuery({
     queryKey: ["roadmaps"],
     queryFn: () => roadmapService.list(),
+    retry: false,
+  });
+
+  const { data: gfMetrics, isError: gfError } = useQuery({
+    queryKey: ["good-fit-metrics"],
+    queryFn: () => mlService.getLatestMLMetrics(),
     retry: false,
   });
 
@@ -288,6 +295,151 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             )}
           </div>
+        </div>
+        {/* Good Fit Classifier — Model Performance */}
+        <div className="md:col-span-12 bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+          <div className="flex items-start justify-between gap-4 mb-md">
+            <div>
+              <p className="font-label-md text-label-md text-on-surface-variant">Good Fit Classifier</p>
+              <h3 className="font-headline-md text-headline-md text-on-surface">
+                {gfMetrics ? `${gfMetrics.algorithm} · ${gfMetrics.dataset_size} samples` : "Binary Fit Predictor"}
+              </h3>
+              {gfMetrics && (
+                <p className="font-body-md text-body-md text-on-surface-variant">
+                  Train: {gfMetrics.train_size} · Test: {gfMetrics.test_size} · Features: {gfMetrics.feature_count}
+                  {gfMetrics.cv_mean > 0 && ` · CV F1: ${(gfMetrics.cv_mean * 100).toFixed(1)}% ± ${(gfMetrics.cv_std * 100).toFixed(1)}%`}
+                </p>
+              )}
+            </div>
+            {gfMetrics && (
+              <span className="rounded-full border border-outline-variant px-3 py-1 font-label-sm text-label-sm text-on-surface-variant shrink-0">
+                {new Date(gfMetrics.created_at).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          {gfError || !gfMetrics ? (
+            <div className="flex h-32 items-center justify-center text-center font-body-md text-on-surface-variant">
+              No Good Fit model trained yet.{" "}
+              <span className="ml-1 text-primary">POST /api/v1/ml/retrain (admin) to train.</span>
+            </div>
+          ) : (
+            <>
+              {/* Metric cards */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-sm mb-md">
+                {gfMetrics.metrics.map((m) => (
+                  <div
+                    key={m.metric}
+                    className="bg-surface-container rounded-xl p-sm flex flex-col items-center border border-outline-variant"
+                  >
+                    <span className="font-display-sm text-display-sm text-on-surface">
+                      {(m.value * 100).toFixed(1)}%
+                    </span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
+                      {m.metric}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                {/* Confusion Matrix */}
+                <div>
+                  <p className="font-label-md text-label-md text-on-surface-variant mb-sm">
+                    Confusion Matrix
+                  </p>
+                  {gfMetrics.confusion_matrix.length === 2 ? (
+                    <div className="space-y-xs">
+                      <div className="grid grid-cols-3 gap-1 text-center text-xs font-medium text-on-surface-variant">
+                        <div />
+                        <div>Pred: Bad Fit</div>
+                        <div>Pred: Good Fit</div>
+                      </div>
+                      {(["Bad Fit", "Good Fit"] as const).map((rowLabel, ri) => (
+                        <div key={rowLabel} className="grid grid-cols-3 gap-1 items-center">
+                          <div className="text-xs font-medium text-on-surface-variant text-right pr-2">
+                            Act: {rowLabel}
+                          </div>
+                          {gfMetrics.confusion_matrix[ri].map((val, ci) => {
+                            const isCorrect = ri === ci;
+                            return (
+                              <div
+                                key={ci}
+                                className={`rounded-lg p-md flex flex-col items-center ${
+                                  isCorrect
+                                    ? "bg-secondary-container text-on-secondary-container"
+                                    : "bg-error-container text-on-error-container"
+                                }`}
+                              >
+                                <span className="font-headline-md text-headline-md">{val}</span>
+                                <span className="font-label-sm text-label-sm opacity-70">
+                                  {ri === 0 && ci === 0 ? "TN" : ri === 0 && ci === 1 ? "FP" : ri === 1 && ci === 0 ? "FN" : "TP"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-on-surface-variant font-body-md">No confusion matrix data.</p>
+                  )}
+                </div>
+
+                {/* ROC Curve */}
+                <div>
+                  <p className="font-label-md text-label-md text-on-surface-variant mb-sm">
+                    ROC Curve — AUC = {(gfMetrics.roc_auc * 100).toFixed(1)}%
+                  </p>
+                  {gfMetrics.roc_curve.fpr.length > 1 ? (
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={gfMetrics.roc_curve.fpr.map((fpr, i) => ({
+                            fpr,
+                            tpr: gfMetrics.roc_curve.tpr[i],
+                          }))}
+                          margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+                        >
+                          <CartesianGrid stroke="#e6f0ea" vertical={false} />
+                          <XAxis
+                            dataKey="fpr"
+                            stroke="#6a7b73"
+                            fontSize={11}
+                            tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                            label={{ value: "FPR", position: "insideBottom", offset: -2, fontSize: 11, fill: "#6a7b73" }}
+                          />
+                          <YAxis
+                            stroke="#6a7b73"
+                            fontSize={11}
+                            domain={[0, 1]}
+                            tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                            label={{ value: "TPR", angle: -90, position: "insideLeft", fontSize: 11, fill: "#6a7b73" }}
+                          />
+                          <Tooltip
+                            contentStyle={{ background: "#ffffff", border: "1px solid #b9cbc2", borderRadius: 8, fontSize: 11 }}
+                            formatter={(v: number) => `${(v * 100).toFixed(1)}%`}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="tpr"
+                            name="TPR"
+                            stroke="#006b54"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <p className="text-on-surface-variant font-body-md">
+                      ROC curve requires both positive and negative samples.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
