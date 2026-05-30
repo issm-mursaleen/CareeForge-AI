@@ -135,8 +135,11 @@ def load_csv_training_dataset(sample_size: int = _SAMPLE_SIZE) -> list[dict]:
 
         min_exp, max_exp = _parse_experience(exp_str)
 
-        # Resume text: candidate's skills + responsibilities
-        resume_text = f"Role: {role}. Skills: {skills}. {responsibilities}"
+        # Include qualification and experience so TF-IDF can learn the label signal
+        resume_text = (
+            f"Qualification: {qual}. Experience: {min_exp} to {max_exp} years. "
+            f"Role: {role}. Skills: {skills}. {responsibilities}"
+        )
 
         # Job description: use DataScientist.csv JDs for variety; fallback to row's own JD
         target_jd = rng.choice(ds_jds) if ds_jds else job_desc

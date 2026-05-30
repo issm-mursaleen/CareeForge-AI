@@ -80,14 +80,17 @@ def load_training_dataset(records: list[dict[str, Any]]) -> list[RawCandidateRec
                 composite = float(raw.get("composite") or 0)
                 label = 1 if composite >= 0.5 else 0
 
+            # Use pre-extracted fields if provided, fall back to text heuristics
+            exp_years = raw.get("experience_years")
+            edu = raw.get("education")
             validated.append(
                 RawCandidateRecord(
                     candidate_id=str(raw.get("candidate_id") or "missing"),
                     resume_text=resume_text,
                     job_description=job_description,
                     skills=list(raw.get("skills") or []),
-                    experience_years=_extract_experience(resume_text),
-                    education=_extract_education(resume_text),
+                    experience_years=float(exp_years) if exp_years is not None else _extract_experience(resume_text),
+                    education=str(edu) if edu else _extract_education(resume_text),
                     target_label=label,
                 )
             )
