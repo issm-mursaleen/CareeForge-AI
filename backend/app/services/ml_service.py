@@ -17,8 +17,6 @@ import logging
 from datetime import datetime
 
 from ..models.good_fit_metrics import GoodFitMetricsDoc
-from ..models.job_match import JobMatch
-from ..models.resume import Resume
 from ai_engine.ml_pipeline.csv_data_loader import load_csv_training_dataset
 from ai_engine.ml_pipeline.data_loader import load_training_dataset
 from ai_engine.ml_pipeline.evaluator import evaluate
@@ -33,61 +31,12 @@ _MIN_TRAINING_RECORDS = 5
 
 
 async def _build_raw_records() -> list[dict]:
-    """Fetch training data.
+    """Fetch training data exclusively from the CSV datasets.
 
-    Priority order:
-      1. CSV datasets (jobs_description.csv + DataScientist.csv) — 8 000 labelled rows
-      2. MongoDB job_matches — real platform data with is_good_fit labels
-      3. MongoDB standalone resumes — cold-start fallback (ATS-derived labels)
+    Source: Datsets/jobs_description.csv + Datsets/DataScientist.csv
+    Labels are derived from qualification score + experience years.
     """
-    records: list[dict] = []
-
-    # ── Source 1: CSV datasets ───────────────────────────────────────────────
-    csv_records = load_csv_training_dataset()
-    records.extend(csv_records)
-    logger.info("ml_csv_records_loaded: %d", len(csv_records))
-
-    # ── Source 2: job_matches (real labelled platform data) ──────────────────
-    job_matches = await JobMatch.find_all().to_list()
-    for jm in job_matches:
-        for candidate in jm.candidates:
-            try:
-                resume = await Resume.get(candidate.resume_id)
-            except Exception:
-                continue
-            if not resume or not resume.raw_text:
-                continue
-            records.append(
-                {
-                    "candidate_id": f"{candidate.resume_id}_{jm.id}",
-                    "resume_text": resume.raw_text,
-                    "job_description": jm.job_description,
-                    "skills": resume.skills,
-                    "is_good_fit": candidate.is_good_fit,
-                    "composite": candidate.composite or 0.0,
-                }
-            )
-
-    # ── Source 3: standalone resumes (cold-start supplement) ─────────────────
-    if len(records) < _MIN_TRAINING_RECORDS:
-        logger.info("ml_cold_start: augmenting from standalone resumes")
-        seen_ids = {r["candidate_id"].split("_")[0] for r in records}
-        resumes = await Resume.find_all().to_list()
-        for resume in resumes:
-            if not resume.raw_text or str(resume.id) in seen_ids:
-                continue
-            ats = resume.ats.score if resume.ats else 50.0
-            records.append(
-                {
-                    "candidate_id": str(resume.id),
-                    "resume_text": resume.raw_text,
-                    "job_description": resume.predicted_role or "software engineer",
-                    "skills": resume.skills,
-                    "is_good_fit": None,
-                    "composite": ats / 100.0,
-                }
-            )
-
+    records = load_csv_training_dataset()
     logger.info("ml_raw_records_fetched: %d", len(records))
     return records
 
